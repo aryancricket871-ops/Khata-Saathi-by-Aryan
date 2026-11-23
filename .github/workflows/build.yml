@@ -1,0 +1,58 @@
+name: Build Aryan Khata
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.11.1
+
+      - name: Create upload keystore (first run only)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "ERROR: GitHub Secret KEYSTORE_PASSWORD is not set"; exit 1
+          fi
+          if [ ! -f keystore/release.jks ]; then
+            mkdir -p keystore
+            keytool -genkeypair -v -keystore keystore/release.jks -storetype PKCS12 \
+              -alias aryankhata -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
+              -dname "CN=Aryan Kumar Tiwari, O=Aryan Digital Solutions, C=IN"
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add keystore/release.jks
+            git commit -m "Add upload keystore"
+            git push
+          fi
+
+      - name: Build release APK and AAB
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: gradle assembleRelease bundleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aryan-Khata-release
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
