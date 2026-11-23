@@ -32,9 +32,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // crash fix: R8 shrinking बंद किया
+            isMinifyEnabled = false
+            isShrinkResources = false
             if (ksPath != null && ksPass != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
