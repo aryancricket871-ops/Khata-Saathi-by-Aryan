@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  KEYSTORE_PASSWORD: AryanKhata2026Safe
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,12 +27,7 @@ jobs:
           gradle-version: 8.11.1
 
       - name: Create upload keystore (first run only)
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_PASSWORD" ]; then
-            echo "ERROR: GitHub Secret KEYSTORE_PASSWORD is not set"; exit 1
-          fi
           if [ ! -f keystore/release.jks ]; then
             mkdir -p keystore
             keytool -genkeypair -v -keystore keystore/release.jks -storetype PKCS12 \
@@ -46,7 +44,6 @@ jobs:
       - name: Build release APK and AAB
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/keystore/release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
         run: gradle assembleRelease bundleRelease --no-daemon
 
